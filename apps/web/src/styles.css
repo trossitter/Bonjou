@@ -1,0 +1,63 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0d1b2a;
+  background: #f4f7fb;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, select, textarea { font: inherit; }
+
+.shell { min-height: 100vh; padding: 28px; }
+.topbar {
+  display: flex; justify-content: space-between; gap: 24px; align-items: center;
+  background: linear-gradient(135deg, #062a78, #d71920);
+  color: white; border-radius: 28px; padding: 28px; box-shadow: 0 18px 45px rgba(16, 24, 40, .18);
+}
+.topbar h1 { font-size: 48px; margin: 0; letter-spacing: -.04em; }
+.topbar p { margin: 6px 0 0; color: rgba(255,255,255,.84); }
+.eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; }
+.topbar button, .replyBox button { background: #12b886; color: white; border: 0; border-radius: 16px; padding: 14px 18px; font-weight: 800; cursor: pointer; }
+
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 22px 0; }
+.metrics div { background: white; border: 1px solid #e6edf5; border-radius: 24px; padding: 20px; box-shadow: 0 10px 30px rgba(16, 24, 40, .06); }
+.metrics strong { display: block; font-size: 36px; letter-spacing: -.04em; }
+.metrics span { color: #607089; font-weight: 700; }
+
+.workspace { display: grid; grid-template-columns: 370px 1fr; gap: 20px; min-height: 640px; }
+.ticketList, .conversation { background: white; border-radius: 28px; border: 1px solid #e6edf5; box-shadow: 0 10px 30px rgba(16, 24, 40, .06); }
+.ticketList { padding: 12px; overflow: auto; }
+.ticketCard { width: 100%; background: transparent; border: 1px solid transparent; border-radius: 20px; padding: 16px; text-align: left; display: grid; gap: 8px; cursor: pointer; }
+.ticketCard:hover, .ticketCard.active { background: #f1f5ff; border-color: #dbe7ff; }
+.ticketCard small { color: #65748b; }
+.row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; background: #eef2f7; color: #26364d; font-size: 11px; font-weight: 900; letter-spacing: .04em; }
+.badge.critical { background: #ffe8e8; color: #ba1a1a; }
+.badge.high { background: #fff2cc; color: #8a5b00; }
+.badge.medium { background: #e7f5ff; color: #0b5cad; }
+.badge.low { background: #e9fbf2; color: #087f5b; }
+
+.conversation { display: flex; flex-direction: column; overflow: hidden; }
+.conversationHeader { padding: 24px; border-bottom: 1px solid #e6edf5; display: flex; justify-content: space-between; gap: 18px; }
+.conversationHeader h2 { margin: 0 0 8px; font-size: 26px; letter-spacing: -.03em; }
+.conversationHeader p { margin: 0; color: #65748b; }
+.controls { display: flex; gap: 8px; }
+.controls select { border: 1px solid #d8e1ec; border-radius: 14px; padding: 10px; background: white; }
+.agentPanel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 18px 24px; background: #fbfcff; border-bottom: 1px solid #e6edf5; }
+.agentPanel div { display: grid; gap: 4px; }
+.agentPanel span { color: #65748b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.messages { flex: 1; overflow: auto; padding: 24px; display: grid; gap: 14px; align-content: start; }
+.message { max-width: 760px; border: 1px solid #e6edf5; border-radius: 22px; padding: 16px; background: #f8fbff; }
+.message.outbound { margin-left: auto; background: #ecfdf5; }
+.messageMeta { display: flex; gap: 8px; align-items: center; color: #65748b; font-size: 12px; margin-bottom: 10px; }
+.original { font-weight: 800; margin: 0 0 8px; }
+.translation { margin: 0; color: #30445f; border-left: 3px solid #12b886; padding-left: 10px; }
+.replyBox { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 18px 24px; border-top: 1px solid #e6edf5; }
+.replyBox textarea { resize: vertical; min-height: 56px; border: 1px solid #d8e1ec; border-radius: 18px; padding: 14px; }
+
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: 1fr; }
+  .agentPanel { grid-template-columns: 1fr 1fr; }
+  .topbar { align-items: stretch; flex-direction: column; }
+}

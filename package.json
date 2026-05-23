@@ -1,0 +1,22 @@
+{
+  "name": "bonjou-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bonjou: WhatsApp-native field ops inbox for Haiti",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm --workspace apps/api run dev\" \"npm --workspace apps/web run dev\"",
+    "build": "npm --workspaces run build",
+    "start": "npm --workspace apps/api run start",
+    "db:generate": "npm --workspace apps/api run prisma:generate",
+    "db:migrate": "npm --workspace apps/api run prisma:migrate",
+    "db:dev": "npm --workspace apps/api run prisma:dev",
+    "db:seed": "npm --workspace apps/api run prisma:seed",
+    "test": "npm --workspaces run test",
+    "demo:seed": "npm run db:generate && npm run db:dev && npm run db:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.6.3"
+  }
+}

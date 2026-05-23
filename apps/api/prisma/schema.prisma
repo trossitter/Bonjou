@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_AGENT
+  RESOLVED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+model Agent {
+  id                String    @id @default(uuid())
+  phoneNumber       String    @unique
+  displayName       String?
+  branchId          String?
+  region            String?
+  preferredLanguage String    @default("ht")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tickets           Ticket[]
+  messages          Message[]
+}
+
+model Ticket {
+  id             String       @id @default(uuid())
+  shortCode      String       @unique
+  status         TicketStatus @default(OPEN)
+  severity       Severity     @default(MEDIUM)
+  category       String       @default("general")
+  title          String
+  summary        String?
+  issueKey       String       @default("general")
+  sourceChannel  String       @default("whatsapp")
+  language       String       @default("unknown")
+  branchId       String?
+  region         String?
+  assignedTo     String?
+  firstResponseAt DateTime?
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  agentId        String
+  agent          Agent        @relation(fields: [agentId], references: [id])
+  messages       Message[]
+
+  @@index([status, severity])
+  @@index([issueKey, createdAt])
+  @@index([branchId])
+}
+
+model Message {
+  id                  String           @id @default(uuid())
+  direction           MessageDirection
+  channel             String           @default("whatsapp")
+  fromNumber          String?
+  toNumber            String?
+  bodyOriginal        String
+  bodyTranslated      String?
+  language            String           @default("unknown")
+  confidence          Float            @default(0.6)
+  translationProvider String           @default("mock")
+  rawPayload          Json?
+  createdAt           DateTime         @default(now())
+  ticketId            String
+  ticket              Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  agentId             String?
+  agent               Agent?           @relation(fields: [agentId], references: [id])
+
+  @@index([ticketId, createdAt])
+}
