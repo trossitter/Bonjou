@@ -190,6 +190,7 @@ function App() {
         </div>
         <button onClick={simulate} disabled={authRequired}>{authRequired ? 'Unlock Bonjou first' : 'Simulate Kreyòl ticket'}</button>
       </header>
+      <div className="motif" aria-hidden="true" />
 
       {authRequired && (
         <form className="accessGate" onSubmit={saveAccessToken}>
