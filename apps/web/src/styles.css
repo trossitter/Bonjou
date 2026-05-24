@@ -19,20 +19,24 @@ input { font: inherit; }
 .topbar p { margin: 6px 0 0; color: rgba(255,255,255,.84); }
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; }
 .topbar button, .replyBox button { background: #12b886; color: white; border: 0; border-radius: 16px; padding: 14px 18px; font-weight: 800; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .62; }
 
 .accessGate {
   margin: 18px 0 0;
   display: grid;
-  grid-template-columns: auto minmax(220px, 360px) auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 360px) auto;
+  align-items: start;
+  gap: 14px;
   background: white;
   border: 1px solid #d8e1ec;
   border-radius: 18px;
-  padding: 14px;
+  padding: 16px;
   box-shadow: 0 10px 30px rgba(16, 24, 40, .06);
 }
-.accessGate label { font-weight: 800; color: #30445f; }
+.accessGate label { display: block; font-weight: 900; color: #30445f; margin-bottom: 4px; }
+.accessGate p { margin: 0; color: #607089; line-height: 1.45; }
+.accessGateCopy { min-width: 0; }
+.accessMessage { color: #0d1b2a; font-weight: 800; margin-top: 8px !important; }
 .accessGate input { border: 1px solid #d8e1ec; border-radius: 12px; padding: 11px 12px; min-width: 0; }
 .accessGate button { background: #0d1b2a; color: white; border: 0; border-radius: 12px; padding: 11px 14px; font-weight: 800; cursor: pointer; }
 
@@ -44,6 +48,10 @@ input { font: inherit; }
 .workspace { display: grid; grid-template-columns: 370px 1fr; gap: 20px; min-height: 640px; }
 .ticketList, .conversation { background: white; border-radius: 28px; border: 1px solid #e6edf5; box-shadow: 0 10px 30px rgba(16, 24, 40, .06); }
 .ticketList { padding: 12px; overflow: auto; }
+.ticketFilters { position: sticky; top: 0; z-index: 2; display: grid; gap: 8px; padding: 4px 0 12px; background: white; }
+.ticketFilters input, .ticketFilters select { width: 100%; border: 1px solid #d8e1ec; border-radius: 8px; background: white; color: #0d1b2a; padding: 11px 12px; }
+.ticketFilters input:focus, .ticketFilters select:focus { outline: 3px solid rgba(18, 184, 134, .2); border-color: #12b886; }
+.emptyState { margin: 12px 4px; border: 1px dashed #d8e1ec; border-radius: 8px; color: #65748b; font-weight: 700; padding: 18px; text-align: center; }
 .ticketCard { width: 100%; background: transparent; border: 1px solid transparent; border-radius: 20px; padding: 16px; text-align: left; display: grid; gap: 8px; cursor: pointer; }
 .ticketCard:hover, .ticketCard.active { background: #f1f5ff; border-color: #dbe7ff; }
 .ticketCard small { color: #65748b; }

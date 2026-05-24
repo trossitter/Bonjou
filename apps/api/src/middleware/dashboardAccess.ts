@@ -26,5 +26,5 @@ export function requireDashboardAccess(req: Request, res: Response, next: NextFu
 
   if (tokensMatch(readToken(req), expectedToken)) return next();
 
-  return res.status(401).json({ error: 'Dashboard access token required' });
+  return res.status(401).json({ error: 'Bonjou demo password required' });
 }

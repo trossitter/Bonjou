@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const booleanEnv = z.preprocess((value) => {
   if (typeof value !== 'string') return value;
@@ -21,9 +21,11 @@ const schema = z.object({
   WHATSAPP_ACCESS_TOKEN: z.string().optional().default(''),
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional().default(''),
   WHATSAPP_GRAPH_VERSION: z.string().default('v21.0'),
-  TRANSLATION_PROVIDER: z.enum(['mock', 'demo', 'openai']).default('mock'),
+  TRANSLATION_PROVIDER: z.enum(['mock', 'demo', 'openai', 'claude']).default('mock'),
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4.1-mini'),
+  ANTHROPIC_API_KEY: z.string().optional().default(''),
+  ANTHROPIC_MODEL: z.string().default('claude-haiku-4-5-20251001'),
   DASHBOARD_ACCESS_TOKEN: z.string().optional().default('')
 });
 

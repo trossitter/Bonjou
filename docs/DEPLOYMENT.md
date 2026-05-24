@@ -40,4 +40,6 @@ OPENAI_API_KEY=
 DASHBOARD_ACCESS_TOKEN=CHANGE_ME_RANDOM_STRING
 ```
 
+The dashboard shows `DASHBOARD_ACCESS_TOKEN` as the Bonjou demo password. It is not a GitHub token, OpenAI key, WhatsApp credential, or DigitalOcean token.
+
 No Railway, Vercel, App Platform, OpenAI key, or Meta credential is required for the demo.
