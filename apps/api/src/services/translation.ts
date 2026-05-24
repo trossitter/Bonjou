@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../env';
 import { detectLanguage, SupportedLanguage } from './language';
 
@@ -25,6 +26,26 @@ function mockTranslate(text: string, source: SupportedLanguage, target: Supporte
   if (target === 'fr' && source === 'en') return `[Traduction française] ${text}`;
   if (target === 'es' && source === 'en') return `[Traducción al español] ${text}`;
   return `[${source} → ${target}] ${text}`;
+}
+
+const TRANSLATION_SYSTEM_PROMPT = `You are a translation service for a field operations platform in Haiti.
+Translate operational support messages accurately. Preserve branch IDs, transaction vocabulary, names, numbers, and urgency.
+Return only the translation — no explanations, no labels, no quotation marks.`;
+
+async function claudeTranslate(text: string, source: SupportedLanguage, target: SupportedLanguage): Promise<string> {
+  if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is missing');
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const langNames: Record<SupportedLanguage, string> = { ht: 'Haitian Creole', fr: 'French', es: 'Spanish', en: 'English', unknown: 'English' };
+  const message = await client.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 1024,
+    system: TRANSLATION_SYSTEM_PROMPT,
+    messages: [
+      { role: 'user', content: `Translate this ${langNames[source]} message to ${langNames[target]}:\n\n${text}` }
+    ]
+  });
+  const block = message.content[0];
+  return block.type === 'text' ? block.text.trim() : text;
 }
 
 async function openAITranslate(text: string, source: SupportedLanguage, target: SupportedLanguage): Promise<string> {
@@ -64,7 +85,10 @@ export async function translateText(text: string, targetLanguage: SupportedLangu
   let confidence = detected.confidence;
 
   try {
-    if (env.TRANSLATION_PROVIDER === 'openai') {
+    if (env.TRANSLATION_PROVIDER === 'claude') {
+      translatedText = await claudeTranslate(text, detected.language, targetLanguage);
+      confidence = Math.max(confidence, 0.85);
+    } else if (env.TRANSLATION_PROVIDER === 'openai') {
       translatedText = await openAITranslate(text, detected.language, targetLanguage);
       confidence = Math.max(confidence, 0.82);
     } else {
