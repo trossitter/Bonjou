@@ -54,10 +54,37 @@ function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL');
+  const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
   const [accessTokenInput, setAccessTokenInput] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
   const [authRequired, setAuthRequired] = useState(false);
-  const selected = useMemo(() => tickets.find((ticket) => ticket.id === selectedId) ?? tickets[0], [tickets, selectedId]);
+  const visibleTickets = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return tickets.filter((ticket) => {
+      const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
+      const matchesSeverity = severityFilter === 'ALL' || ticket.severity === severityFilter;
+      const searchableText = [
+        ticket.shortCode,
+        ticket.title,
+        ticket.summary,
+        ticket.status,
+        ticket.severity,
+        ticket.category,
+        ticket.issueKey,
+        ticket.branchId,
+        ticket.region,
+        ticket.language,
+        ticket.agent.displayName,
+        ticket.agent.phoneNumber,
+        ...ticket.messages.flatMap((message) => [message.bodyOriginal, message.bodyTranslated, message.language])
+      ].filter(Boolean).join(' ').toLowerCase();
+      const matchesQuery = !normalizedQuery || searchableText.includes(normalizedQuery);
+      return matchesStatus && matchesSeverity && matchesQuery;
+    });
+  }, [query, severityFilter, statusFilter, tickets]);
+  const selected = useMemo(() => visibleTickets.find((ticket) => ticket.id === selectedId) ?? visibleTickets[0], [visibleTickets, selectedId]);
 
   function authHeaders(): HeadersInit {
     return accessToken ? { 'x-dashboard-access-token': accessToken } : {};
@@ -177,13 +204,31 @@ function App() {
 
       <section className="workspace">
         <aside className="ticketList">
-          {tickets.map((ticket) => (
+          <div className="ticketFilters">
+            <input
+              aria-label="Search tickets"
+              placeholder="Search tickets"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as Status | 'ALL')}>
+              <option value="ALL">All status</option>
+              {['OPEN', 'IN_PROGRESS', 'WAITING_ON_AGENT', 'RESOLVED'].map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+            <select aria-label="Filter by severity" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value as Severity | 'ALL')}>
+              <option value="ALL">All severity</option>
+              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((severity) => <option key={severity} value={severity}>{severity}</option>)}
+            </select>
+          </div>
+
+          {visibleTickets.map((ticket) => (
             <button key={ticket.id} onClick={() => setSelectedId(ticket.id)} className={ticket.id === selected?.id ? 'active ticketCard' : 'ticketCard'}>
               <span className="row"><strong>{ticket.shortCode}</strong><Badge tone={ticket.severity.toLowerCase()}>{ticket.severity}</Badge></span>
               <span>{ticket.title}</span>
               <small>{ticket.agent.displayName ?? ticket.agent.phoneNumber} · {ticket.branchId ?? 'No branch'}</small>
             </button>
           ))}
+          {tickets.length > 0 && visibleTickets.length === 0 && <p className="emptyState">No tickets match filters.</p>}
         </aside>
 
         {selected && (
