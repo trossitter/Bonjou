@@ -14,7 +14,7 @@ Designed by Thalia.
 - PostgreSQL persistence with Prisma
 - Socket.IO real-time updates
 - Docker Compose local deployment
-- Railway-ready Dockerfile
+- DigitalOcean Droplet deployment with Docker Compose
 
 ## Explicitly out of scope for this MVP
 
@@ -43,28 +43,40 @@ curl -X POST http://localhost:3000/dev/simulate-inbound \
 
 The ticket should appear in the dashboard immediately.
 
-## Real WhatsApp setup
+## Deploy on a DigitalOcean Droplet
 
-1. Create a Meta app with WhatsApp Business Platform enabled.
-2. Copy `.env.example` to `.env`.
-3. Set:
+Bonjou is Docker-first and defaults to demo-safe settings: WhatsApp disabled, mock translation enabled, and no paid runtime AI required.
+Production demo deployments should set `DASHBOARD_ACCESS_TOKEN` so the shared inbox and demo endpoints are not open to the public internet.
 
-```bash
-WHATSAPP_ENABLED=true
-WHATSAPP_VERIFY_TOKEN=<make-up-a-secret-token>
-WHATSAPP_ACCESS_TOKEN=<meta-permanent-or-temporary-token>
-WHATSAPP_PHONE_NUMBER_ID=<meta-phone-number-id>
+Use the Droplet guide:
+
+```text
+docs/DROPLET_DEPLOYMENT.md
 ```
 
-4. In Meta, set the webhook callback URL:
+Short version on the Droplet:
+
+```bash
+cp .env.production.example .env.production
+nano .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+## Real WhatsApp setup
+
+Demo mode does not require Meta credentials. If you later connect real WhatsApp, configure the empty `WHATSAPP_*` values only in your server environment and never commit them.
+
+1. Create a Meta app with WhatsApp Business Platform enabled.
+2. Set `WHATSAPP_ENABLED=true` on the server.
+3. In Meta, set the webhook callback URL:
 
 ```text
 https://YOUR_DOMAIN/webhooks/whatsapp
 ```
 
-5. Set the verify token to the same value as `WHATSAPP_VERIFY_TOKEN`.
-6. Subscribe to `messages` webhook events.
-7. Send a WhatsApp test message to the business number.
+4. Set the verify token to the same value as `WHATSAPP_VERIFY_TOKEN`.
+5. Subscribe to `messages` webhook events.
+6. Send a WhatsApp test message to the business number.
 
 ## Translation providers
 

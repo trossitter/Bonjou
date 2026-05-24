@@ -44,6 +44,7 @@ interface Ticket {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
+const ACCESS_TOKEN_STORAGE_KEY = 'bonjou.dashboardAccessToken';
 
 function Badge({ children, tone }: { children: React.ReactNode; tone?: string }) {
   return <span className={`badge ${tone ?? ''}`}>{children}</span>;
@@ -53,11 +54,28 @@ function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const [accessTokenInput, setAccessTokenInput] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
+  const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
+  const [authRequired, setAuthRequired] = useState(false);
   const selected = useMemo(() => tickets.find((ticket) => ticket.id === selectedId) ?? tickets[0], [tickets, selectedId]);
 
+  function authHeaders(): HeadersInit {
+    return accessToken ? { 'x-dashboard-access-token': accessToken } : {};
+  }
+
+  function handleUnauthorized(response: Response) {
+    if (response.status === 401) {
+      setAuthRequired(true);
+      return true;
+    }
+    return false;
+  }
+
   async function loadTickets() {
-    const response = await fetch(`${API_BASE}/api/tickets`);
+    const response = await fetch(`${API_BASE}/api/tickets`, { headers: authHeaders() });
+    if (handleUnauthorized(response)) return;
     const data = await response.json();
+    setAuthRequired(false);
     setTickets(data.tickets);
     setSelectedId((current) => current ?? data.tickets?.[0]?.id ?? null);
   }
@@ -74,34 +92,36 @@ function App() {
     });
     socket.on('message:new', loadTickets);
     return () => { socket.disconnect(); };
-  }, []);
+  }, [accessToken]);
 
   async function updateTicket(partial: Partial<Pick<Ticket, 'status' | 'severity'>>) {
     if (!selected) return;
     const response = await fetch(`${API_BASE}/api/tickets/${selected.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(partial)
     });
+    if (handleUnauthorized(response)) return;
     const data = await response.json();
     setTickets((current) => current.map((ticket) => ticket.id === selected.id ? data.ticket : ticket));
   }
 
   async function sendReply() {
     if (!selected || !reply.trim()) return;
-    await fetch(`${API_BASE}/api/tickets/${selected.id}/messages`, {
+    const response = await fetch(`${API_BASE}/api/tickets/${selected.id}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ body: reply })
     });
+    if (handleUnauthorized(response)) return;
     setReply('');
     await loadTickets();
   }
 
   async function simulate() {
-    await fetch(`${API_BASE}/dev/simulate-inbound`, {
+    const response = await fetch(`${API_BASE}/dev/simulate-inbound`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
         from: `50937${Math.floor(100000 + Math.random() * 900000)}`,
         text: 'POS la pa mache. Kliyan yo pa ka depoze lajan.',
@@ -110,6 +130,18 @@ function App() {
         region: 'Port-au-Prince'
       })
     });
+    if (handleUnauthorized(response)) return;
+  }
+
+  function saveAccessToken(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmed = accessTokenInput.trim();
+    if (trimmed) {
+      localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, trimmed);
+    } else {
+      localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    }
+    setAccessToken(trimmed);
   }
 
   return (
@@ -122,6 +154,20 @@ function App() {
         </div>
         <button onClick={simulate}>Simulate Kreyòl ticket</button>
       </header>
+
+      {authRequired && (
+        <form className="accessGate" onSubmit={saveAccessToken}>
+          <label htmlFor="dashboardAccessToken">Demo access token</label>
+          <input
+            id="dashboardAccessToken"
+            value={accessTokenInput}
+            onChange={(event) => setAccessTokenInput(event.target.value)}
+            type="password"
+            autoComplete="off"
+          />
+          <button type="submit">Unlock</button>
+        </form>
+      )}
 
       <section className="metrics">
         <div><strong>{tickets.filter(t => t.status !== 'RESOLVED').length}</strong><span>Open</span></div>

@@ -6,6 +6,7 @@ import pinoHttp from 'pino-http';
 import path from 'path';
 import { Server } from 'socket.io';
 import { env } from './env';
+import { requireDashboardAccess } from './middleware/dashboardAccess';
 import { createTicketRouter } from './routes/tickets';
 import { createWhatsAppWebhookRouter } from './routes/whatsappWebhook';
 
@@ -22,10 +23,10 @@ app.use(pinoHttp());
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-app.use('/api/tickets', createTicketRouter(io));
+app.use('/api/tickets', requireDashboardAccess, createTicketRouter(io));
 const webhookRouter = createWhatsAppWebhookRouter(io);
 app.use('/webhooks/whatsapp', webhookRouter);
-app.use('/dev', webhookRouter);
+app.use('/dev', requireDashboardAccess, webhookRouter);
 
 if (env.NODE_ENV === 'production') {
   const publicDir = path.resolve(__dirname, 'public');

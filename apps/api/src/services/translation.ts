@@ -60,7 +60,7 @@ async function openAITranslate(text: string, source: SupportedLanguage, target: 
 export async function translateText(text: string, targetLanguage: SupportedLanguage = 'en', sourceLanguage?: SupportedLanguage): Promise<TranslationResult> {
   const detected = sourceLanguage ? { language: sourceLanguage, confidence: 0.8 } : detectLanguage(text);
   let translatedText = text;
-  let provider = env.TRANSLATION_PROVIDER;
+  let provider: string = env.TRANSLATION_PROVIDER;
   let confidence = detected.confidence;
 
   try {
@@ -69,7 +69,7 @@ export async function translateText(text: string, targetLanguage: SupportedLangu
       confidence = Math.max(confidence, 0.82);
     } else {
       translatedText = mockTranslate(text, detected.language, targetLanguage);
-      provider = 'mock';
+      provider = env.TRANSLATION_PROVIDER === 'demo' ? 'demo' : 'mock';
     }
   } catch (error) {
     translatedText = mockTranslate(text, detected.language, targetLanguage);
