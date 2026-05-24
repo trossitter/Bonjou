@@ -49,13 +49,13 @@ If the DigitalOcean web console feels slow, do not use it. Use your normal local
 scripts/bootstrap-droplet.sh YOUR_DROPLET_IP
 ```
 
-That helper installs Docker, clones Bonjou into `/opt/bonjou`, creates `.env.production` with generated demo-safe values, starts the app, and does not need any DigitalOcean token. If you use the helper, fetch your demo access token with:
+That helper installs Docker, clones Bonjou into `/opt/bonjou`, creates `.env.production` with generated demo-safe values, starts the app, and does not need any DigitalOcean token. If you use the helper, fetch your Bonjou demo password with:
 
 ```bash
 ssh root@YOUR_DROPLET_IP "grep '^DASHBOARD_ACCESS_TOKEN=' /opt/bonjou/.env.production"
 ```
 
-Keep that token private. Share it only with people who should see the pilot. If you use the helper, skip to the smoke tests below.
+Keep that password private. Share it only with people who should see the pilot. It is not a GitHub token, OpenAI key, WhatsApp credential, or DigitalOcean token. If you use the helper, skip to the smoke tests below.
 
 ## 3. Install Docker And Basic Tools
 
@@ -103,7 +103,7 @@ openssl rand -hex 24
 openssl rand -hex 24
 ```
 
-Use one value for `POSTGRES_PASSWORD`, one for `WHATSAPP_VERIFY_TOKEN`, and one for `DASHBOARD_ACCESS_TOKEN`.
+Use one value for `POSTGRES_PASSWORD`, one for `WHATSAPP_VERIFY_TOKEN`, and one for `DASHBOARD_ACCESS_TOKEN`. The dashboard will call `DASHBOARD_ACCESS_TOKEN` the Bonjou demo password.
 
 ## 6. Edit Production Env
 
@@ -129,7 +129,7 @@ SEED_DEMO_DATA=false
 OPENAI_API_KEY=
 ```
 
-Keep `DASHBOARD_ACCESS_TOKEN` private. It is the shared pilot token for ticket APIs, the dashboard data, and `/dev/simulate-inbound`.
+Keep `DASHBOARD_ACCESS_TOKEN` private. It is the shared Bonjou demo password for ticket APIs, the dashboard data, and `/dev/simulate-inbound`.
 
 ## 7. Start The App
 
@@ -178,7 +178,7 @@ http://YOUR_DROPLET_IP
 
 You should see the ticket, the original message, a mock English translation, status/severity controls, and a reply box. Replies work in demo mode without real WhatsApp credentials.
 
-The dashboard asks for the same demo access token before loading ticket data.
+The dashboard asks for the same Bonjou demo password before loading ticket data.
 
 ## 10. Local Docker Demo
 
@@ -289,7 +289,7 @@ Look for database connection errors. Confirm `DATABASE_URL` uses `db` as the hos
 
 ### Dashboard Or Simulate Endpoint Says Unauthorized
 
-Use the token from `.env.production`:
+Use the Bonjou demo password from `.env.production`. The variable is named `DASHBOARD_ACCESS_TOKEN` because curl sends it as an API header, but the dashboard calls it the Bonjou demo password:
 
 ```bash
 grep '^DASHBOARD_ACCESS_TOKEN=' .env.production

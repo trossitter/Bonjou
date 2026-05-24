@@ -46,7 +46,7 @@ The ticket should appear in the dashboard immediately.
 ## Deploy on a DigitalOcean Droplet
 
 Bonjou is Docker-first and defaults to demo-safe settings: WhatsApp disabled, mock translation enabled, and no paid runtime AI required.
-Production demo deployments should set `DASHBOARD_ACCESS_TOKEN` so the shared inbox and demo endpoints are not open to the public internet.
+Production demo deployments should set `DASHBOARD_ACCESS_TOKEN` so the shared inbox and demo endpoints are not open to the public internet. In the web dashboard, this is shown as the Bonjou demo password. It is not a GitHub token, OpenAI key, WhatsApp credential, or DigitalOcean token.
 
 Use the Droplet guide:
 

@@ -19,20 +19,24 @@ input { font: inherit; }
 .topbar p { margin: 6px 0 0; color: rgba(255,255,255,.84); }
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; }
 .topbar button, .replyBox button { background: #12b886; color: white; border: 0; border-radius: 16px; padding: 14px 18px; font-weight: 800; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .62; }
 
 .accessGate {
   margin: 18px 0 0;
   display: grid;
-  grid-template-columns: auto minmax(220px, 360px) auto;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 360px) auto;
+  align-items: start;
+  gap: 14px;
   background: white;
   border: 1px solid #d8e1ec;
   border-radius: 18px;
-  padding: 14px;
+  padding: 16px;
   box-shadow: 0 10px 30px rgba(16, 24, 40, .06);
 }
-.accessGate label { font-weight: 800; color: #30445f; }
+.accessGate label { display: block; font-weight: 900; color: #30445f; margin-bottom: 4px; }
+.accessGate p { margin: 0; color: #607089; line-height: 1.45; }
+.accessGateCopy { min-width: 0; }
+.accessMessage { color: #0d1b2a; font-weight: 800; margin-top: 8px !important; }
 .accessGate input { border: 1px solid #d8e1ec; border-radius: 12px; padding: 11px 12px; min-width: 0; }
 .accessGate button { background: #0d1b2a; color: white; border: 0; border-radius: 12px; padding: 11px 14px; font-weight: 800; cursor: pointer; }
 
