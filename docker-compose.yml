@@ -18,6 +18,7 @@ services:
 
   app:
     build: .
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -29,9 +30,10 @@ services:
       NODE_ENV: production
       WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
       WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-change-me-local-verify-token}
+      TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-mock}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
     ports:
       - "3000:3000"
-    command: sh -c "npm --workspace apps/api run prisma:migrate && npm --workspace apps/api run prisma:seed && npm start"
 
 volumes:
   bonjou_pgdata:

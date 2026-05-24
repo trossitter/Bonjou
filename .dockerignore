@@ -1,11 +1,14 @@
-node_modules
+.git
 .env
 .env.*
 !.env.example
 !.env.production.example
+node_modules
+apps/*/node_modules
+apps/*/dist
 dist
 build
-.DS_Store
 coverage
-.prisma
+.DS_Store
 *.log
+.prisma
