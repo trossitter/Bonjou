@@ -19,6 +19,8 @@ input { font: inherit; }
 .topbar p { margin: 6px 0 0; color: rgba(255,255,255,.84); }
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 700; }
 .topbar button, .replyBox button { background: #c9920a; color: white; border: 0; border-radius: 8px; padding: 14px 18px; font-weight: 800; cursor: pointer; }
+.waButton { background: #25D366 !important; display: inline-flex; align-items: center; gap: 7px; }
+.waButton:hover:not(:disabled) { background: #1da851 !important; }
 button:disabled { cursor: not-allowed; opacity: .62; }
 
 .accessGate {
@@ -64,6 +66,9 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .ticketCard { width: 100%; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 16px; text-align: left; display: grid; gap: 8px; cursor: pointer; }
 .ticketCard:hover, .ticketCard.active { background: #f1f5ff; border-color: #dbe7ff; }
 .ticketCard small { color: #65748b; }
+.ticketCardMeta { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.waBadgeSmall { display: inline-flex; align-items: center; gap: 3px; background: #e9fdf0; color: #1a7a3f; border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.waBadgeMsg { display: inline-flex; align-items: center; gap: 3px; color: #25D366; font-size: 11px; font-weight: 700; }
 .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; background: #eef2f7; color: #26364d; font-size: 11px; font-weight: 900; letter-spacing: .04em; }
 .badge.critical { background: #ffe8e8; color: #ba1a1a; }
@@ -88,6 +93,14 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .translation { margin: 0; color: #30445f; border-left: 3px solid #c9920a; padding-left: 10px; }
 .replyBox { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 18px 24px; border-top: 1px solid #e6edf5; }
 .replyBox textarea { resize: vertical; min-height: 56px; border: 1px solid #d8e1ec; border-radius: 8px; padding: 14px; }
+
+.haitiMapWrap { display: flex; align-items: center; gap: 24px; background: white; border: 1px solid #e6edf5; border-radius: 12px; padding: 16px 22px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(16, 24, 40, .06); }
+.haitiMapLabel { min-width: 160px; }
+.haitiMapSub { color: #65748b; font-size: 13px; margin: 4px 0 0; }
+.haitiMapSvg { flex: 1; max-height: 160px; }
+.haitiMapSvg text { font-family: inherit; }
+@keyframes cityPulseAnim { 0%, 100% { r: 10; opacity: 0.18; } 50% { r: 15; opacity: 0.32; } }
+.cityPulse { animation: cityPulseAnim 2s ease-in-out infinite; }
 
 @media (max-width: 900px) {
   .workspace { grid-template-columns: 1fr; }

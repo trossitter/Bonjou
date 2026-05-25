@@ -1,14 +1,43 @@
 export type SupportedLanguage = 'ht' | 'fr' | 'es' | 'en' | 'unknown';
 
 const HAITIAN_CREOLE_HINTS = [
-  'mwen', 'ou', 'li', 'nou', 'yo', 'pa', 'ka', 'ap', 'gen', 'depi', 'fè', 'fe', 'lajan', 'kliyan', 'retrè', 'retre', 'depoze', 'mache', 'branch', 'tanpri'
+  'mwen', 'ou', 'li', 'nou', 'yo', 'pa', 'ka', 'ap', 'gen', 'depi', 'fè', 'fe', 'lajan', 'kliyan',
+  'retrè', 'retre', 'depoze', 'mache', 'branch', 'tanpri', 'pari', 'genyen', 'sistèm', 'rezilta', 'goud'
 ];
-const FRENCH_HINTS = ['bonjour', 'merci', 'problème', 'probleme', 'connexion', 'retrait', 'dépôt', 'depôt', 'client', 'impossible'];
-const SPANISH_HINTS = ['hola', 'gracias', 'retiro', 'depósito', 'deposito', 'cliente', 'no puedo', 'aplicación', 'sucursal'];
+const FRENCH_HINTS = [
+  'bonjour', 'merci', 'problème', 'probleme', 'connexion', 'retrait', 'dépôt', 'depôt', 'client',
+  'impossible', 'système', 'systeme', 'résultat', 'gains', 'paris', 'compte'
+];
+const SPANISH_HINTS = [
+  'hola', 'gracias', 'retiro', 'depósito', 'deposito', 'cliente', 'no puedo', 'aplicación',
+  'sucursal', 'apuesta', 'apostar', 'cuota', 'sistema', 'resultado'
+];
 
-function score(text: string, words: string[]) {
-  const lower = ` ${text.toLowerCase()} `;
-  return words.reduce((count, word) => count + (lower.includes(` ${word} `) || lower.includes(word) ? 1 : 0), 0);
+function levenshtein(a: string, b: string): number {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i - 1] === b[j - 1] ? row[j - 1] : 1 + Math.min(row[j - 1], row[j], prev);
+      row[j - 1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length];
+}
+
+function score(text: string, words: string[]): number {
+  const lower = text.toLowerCase();
+  const tokens = lower.split(/\s+/);
+  return words.reduce((total, hint) => {
+    if (lower.includes(hint)) return total + 1;
+    // Allow 1-edit fuzzy match for hints of 5+ chars (handles keyboard misspellings)
+    if (hint.length >= 5 && tokens.some(t => Math.abs(t.length - hint.length) <= 1 && levenshtein(t, hint) <= 1)) {
+      return total + 0.7;
+    }
+    return total;
+  }, 0);
 }
 
 export function detectLanguage(text: string): { language: SupportedLanguage; confidence: number } {
