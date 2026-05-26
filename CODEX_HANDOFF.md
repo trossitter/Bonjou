@@ -116,17 +116,26 @@ Single-file React app (~540 lines). No component library, no Tailwind — plain 
 - The deploy script uses `.env.production` + `docker-compose.prod.yml`
 
 **Current production state:**
-- `TRANSLATION_PROVIDER=mock` — outbound replies show `[Kreyòl translation]` placeholder
-- To enable real translation: add `ANTHROPIC_API_KEY=<key>` and `TRANSLATION_PROVIDER=claude` to `/opt/bonjou/.env.production`, then redeploy
+- `TRANSLATION_PROVIDER=claude` — real Haiku translation active on outbound replies
+- `ANTHROPIC_API_KEY` set in `/opt/bonjou/.env.production`
 - `DASHBOARD_ACCESS_TOKEN=` (empty) — no auth gate
 - `WHATSAPP_ENABLED=false` — simulate button only, no live WhatsApp
+
+**Critical deploy gotcha — Docker Compose variable interpolation:**
+`docker-compose.prod.yml` `environment:` block uses `${VAR:-default}` syntax. Docker resolves these from the **host shell environment**, not from `env_file`. So `${TRANSLATION_PROVIDER:-mock}` always resolves to `mock` unless the host shell exports it. Fix: only `NODE_ENV`, `PORT`, and `DATABASE_URL` live in `environment:`; everything else comes from `env_file: .env.production` exclusively.
+
+**Password reset note:** If you do `docker compose down && up` and the db volume already exists, PostgreSQL won't re-initialize (so POSTGRES_PASSWORD env var has no effect). If you see `P1000: Authentication failed`, run:
+```
+docker exec bonjou-db-1 psql -U postgres -c "ALTER USER postgres PASSWORD '<your-password>';"
+```
+where `<your-password>` matches `POSTGRES_PASSWORD` in `.env.production`.
 
 ---
 
 ## What's not built yet
 
 - **Real WhatsApp integration** — webhook is wired but Meta credentials not configured. `WHATSAPP_ENABLED=false`.
-- **Real Claude translation on droplet** — mock only. Add `ANTHROPIC_API_KEY` to unblock.
+- **Real Claude translation on droplet** — live as of 2026-05-25. Already configured.
 - **Agent management UI** — no way to create/edit agents from the dashboard; agents are created implicitly when a message arrives from a new phone number.
 - **Assignment / on-call routing** — `assignedTo` field exists on the ticket model but nothing sets or displays it.
 - **Ticket history / audit log** — status changes aren't timestamped beyond `updatedAt`.
