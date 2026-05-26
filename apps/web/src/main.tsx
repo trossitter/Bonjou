@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { io } from 'socket.io-client';
 import './styles.css';
@@ -46,12 +46,12 @@ interface Ticket {
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 const ACCESS_TOKEN_STORAGE_KEY = 'bonjou.dashboardAccessToken';
 
-const LANG_META: Record<string, { flag: string; name: string }> = {
-  ht: { flag: '🇭🇹', name: 'Kreyòl' },
-  fr: { flag: '🇫🇷', name: 'Français' },
-  es: { flag: '🇪🇸', name: 'Español' },
-  en: { flag: '🇺🇸', name: 'English' },
-  unknown: { flag: '🌐', name: 'Unknown' },
+const LANG_META: Record<string, { name: string }> = {
+  ht: { name: 'Kreyòl' },
+  fr: { name: 'Français' },
+  es: { name: 'Español' },
+  en: { name: 'English' },
+  unknown: { name: 'Unknown' },
 };
 
 const DEMO_SCENARIOS = [
@@ -134,15 +134,31 @@ function WhatsAppIcon({ size = 13 }: { size?: number }) {
   );
 }
 
-function HaitiMap({ activeBranches }: { activeBranches: string[] }) {
+interface CityStats { total: number; open: number; today: number; }
+
+function HaitiMap({ activeBranches, cityStats }: { activeBranches: string[]; cityStats: Record<string, CityStats> }) {
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const activeCodes = new Set(activeBranches.map(b => b.slice(0, 3).toUpperCase()));
+
   return (
     <div className="haitiMapWrap">
       <div className="haitiMapLabel">
         <p className="eyebrow">Live field map</p>
-        <p className="haitiMapSub">Active branches lighting up as reports come in</p>
+        <p className="haitiMapSub">Click a city to see ticket counts</p>
       </div>
-      <svg viewBox="0 0 390 270" className="haitiMapSvg" aria-label="Map of Haiti with active branch locations">
+      <svg
+        viewBox="0 0 390 270"
+        className="haitiMapSvg"
+        aria-label="Map of Haiti with active branch locations"
+        onClick={(e) => { if (e.target === e.currentTarget) setSelectedCity(null); }}
+      >
+        <defs>
+          <filter id="popShadow" x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="rgba(16,24,40,0.14)" />
+          </filter>
+        </defs>
+        {/* click-away background */}
+        <rect x="0" y="0" width="390" height="270" fill="transparent" onClick={() => setSelectedCity(null)} />
         {/* Haiti outline */}
         <path
           d="M 142 42 L 197 22 L 248 38 L 296 40 L 358 68 L 370 128 L 354 188 L 320 220 L 262 228 L 205 225 L 148 238 L 122 248 L 22 222 L 68 194 L 120 158 L 110 110 L 130 70 Z"
@@ -156,11 +172,31 @@ function HaitiMap({ activeBranches }: { activeBranches: string[] }) {
         {/* City dots */}
         {Object.entries(CITY_COORDS).map(([code, { x, y, name }]) => {
           const active = activeCodes.has(code);
+          const selected = selectedCity === code;
+          const stats = cityStats[code] ?? { total: 0, open: 0, today: 0 };
+          // Popover above for southern cities, below for northern
+          const popAbove = y > 120;
+          const popY = popAbove ? y - 78 : y + 14;
+          const popX = Math.max(4, Math.min(270, x - 58));
+          const ticketWord = stats.total === 1 ? 'ticket' : 'tickets';
           return (
-            <g key={code}>
+            <g key={code} style={{ cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedCity(c => c === code ? null : code); }}>
               {active && <circle cx={x} cy={y} r="10" fill="#c9920a" opacity="0.18" className="cityPulse" />}
-              <circle cx={x} cy={y} r={active ? 5 : 3.5} fill={active ? '#c9920a' : '#8fa3bf'} stroke="white" strokeWidth="1.5" />
+              {selected && <circle cx={x} cy={y} r="16" fill="#c9920a" opacity="0.14" />}
+              <circle cx={x} cy={y} r={active || selected ? 5 : 3.5} fill={active || selected ? '#c9920a' : '#8fa3bf'} stroke="white" strokeWidth="1.5" />
               <text x={x} y={y - 9} textAnchor="middle" fontSize="9" fill={active ? '#7a5800' : '#607089'} fontWeight={active ? '700' : '400'}>{name}</text>
+              {selected && (
+                <g>
+                  <rect x={popX} y={popY} width={118} height={62} rx={6} fill="white" stroke="#e6edf5" strokeWidth="1" filter="url(#popShadow)" />
+                  <text x={popX + 10} y={popY + 17} fontSize="10" fontWeight="800" fill="#0d1b2a">{name}</text>
+                  <text x={popX + 10} y={popY + 33} fontSize="9.5" fill="#607089">
+                    {stats.open} open · {stats.total} {ticketWord}
+                  </text>
+                  <text x={popX + 10} y={popY + 50} fontSize="9.5" fontWeight="700" fill={stats.today > 0 ? '#c9920a' : '#8fa3bf'}>
+                    {stats.today} today
+                  </text>
+                </g>
+              )}
             </g>
           );
         })}
@@ -185,10 +221,15 @@ function App() {
   const [authRequired, setAuthRequired] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
   const [scenarioIndex, setScenarioIndex] = useState(0);
+  const [activeMetric, setActiveMetric] = useState<'open' | 'critical' | 'closed_today' | 'resolved' | 'patterns' | null>(null);
+  const [sortBy, setSortBy] = useState<'newest' | 'severity' | 'oldest'>('severity');
+
+  const SEV_RANK: Record<Severity, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
   const visibleTickets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return tickets.filter((ticket) => {
+    const today = new Date().toDateString();
+    const filtered = tickets.filter((ticket) => {
       const matchesStatus = statusFilter === 'ALL' || ticket.status === statusFilter;
       const matchesSeverity = severityFilter === 'ALL' || ticket.severity === severityFilter;
       const searchableText = [
@@ -198,9 +239,28 @@ function App() {
         ...ticket.messages.flatMap((m) => [m.bodyOriginal, m.bodyTranslated, m.language])
       ].filter(Boolean).join(' ').toLowerCase();
       const matchesQuery = !normalizedQuery || searchableText.includes(normalizedQuery);
-      return matchesStatus && matchesSeverity && matchesQuery;
+      let matchesMetric = true;
+      if (activeMetric === 'open') matchesMetric = ticket.status !== 'RESOLVED';
+      else if (activeMetric === 'critical') matchesMetric = ticket.severity === 'CRITICAL' && ticket.status !== 'RESOLVED';
+      else if (activeMetric === 'closed_today') matchesMetric = ticket.status === 'RESOLVED' && new Date(ticket.updatedAt).toDateString() === today;
+      else if (activeMetric === 'resolved') matchesMetric = ticket.status === 'RESOLVED';
+      return matchesStatus && matchesSeverity && matchesQuery && matchesMetric;
     });
-  }, [query, severityFilter, statusFilter, tickets]);
+
+    return [...filtered].sort((a, b) => {
+      if (activeMetric === 'patterns') {
+        const ik = a.issueKey.localeCompare(b.issueKey);
+        if (ik !== 0) return ik;
+        return SEV_RANK[a.severity] - SEV_RANK[b.severity];
+      }
+      if (sortBy === 'severity') {
+        const sev = SEV_RANK[a.severity] - SEV_RANK[b.severity];
+        if (sev !== 0) return sev;
+      }
+      if (sortBy === 'oldest') return +new Date(a.updatedAt) - +new Date(b.updatedAt);
+      return +new Date(b.updatedAt) - +new Date(a.updatedAt);
+    });
+  }, [query, severityFilter, statusFilter, tickets, activeMetric, sortBy]);
 
   const selected = useMemo(
     () => visibleTickets.find((t) => t.id === selectedId) ?? visibleTickets[0],
@@ -296,7 +356,41 @@ function App() {
     setAuthMessage('Checking Bonjou demo password...');
   }
 
+  const workspaceRef = useRef<HTMLElement>(null);
+
   const activeBranches = tickets.map((t) => t.branchId).filter(Boolean) as string[];
+
+  const cityStats = useMemo(() => {
+    const today = new Date().toDateString();
+    const stats: Record<string, CityStats> = {};
+    for (const code of Object.keys(CITY_COORDS)) {
+      const ct = tickets.filter(t => t.branchId?.slice(0, 3).toUpperCase() === code);
+      stats[code] = {
+        total: ct.length,
+        open: ct.filter(t => t.status !== 'RESOLVED').length,
+        today: ct.filter(t => new Date(t.updatedAt).toDateString() === today).length,
+      };
+    }
+    return stats;
+  }, [tickets]);
+
+  const mttr = useMemo(() => {
+    const resolved = tickets.filter(t => t.status === 'RESOLVED' && t.messages.length > 0);
+    if (resolved.length === 0) return null;
+    const totalMs = resolved.reduce((sum, t) => {
+      const start = new Date(t.messages[0].createdAt).getTime();
+      const end = new Date(t.updatedAt).getTime();
+      return sum + Math.max(0, end - start);
+    }, 0);
+    return Math.round(totalMs / resolved.length / 60000);
+  }, [tickets]);
+
+  const closedToday = useMemo(() => {
+    const today = new Date().toDateString();
+    return tickets.filter(t => t.status === 'RESOLVED' && new Date(t.updatedAt).toDateString() === today).length;
+  }, [tickets]);
+
+  const mttrDisplay = mttr === null ? '—' : mttr < 60 ? `${mttr}m` : `${Math.floor(mttr / 60)}h ${mttr % 60}m`;
 
   return (
     <main className="shell">
@@ -310,7 +404,6 @@ function App() {
           {authRequired ? 'Unlock Bonjou first' : <><WhatsAppIcon size={16} />New field report</>}
         </button>
       </header>
-      <div className="motif" aria-hidden="true" />
 
       {authRequired && (
         <form className="accessGate" onSubmit={saveAccessToken}>
@@ -335,14 +428,40 @@ function App() {
       {!authRequired && (
         <>
           <section className="metrics">
-            <div><strong>{tickets.filter(t => t.status !== 'RESOLVED').length}</strong><span>Open</span></div>
-            <div><strong>{tickets.filter(t => t.severity === 'CRITICAL').length}</strong><span>Critical</span></div>
-            <div><strong>{new Set(tickets.map(t => t.issueKey)).size}</strong><span>Issue patterns</span></div>
+            {([
+              { key: 'open'         as const, value: tickets.filter(t => t.status !== 'RESOLVED').length,                              label: 'Open tickets' },
+              { key: 'critical'     as const, value: tickets.filter(t => t.severity === 'CRITICAL' && t.status !== 'RESOLVED').length,  label: 'Critical · open' },
+              { key: 'resolved'     as const, value: mttrDisplay,                                                                       label: 'Mean time to resolve' },
+              { key: 'closed_today' as const, value: closedToday,                                                                       label: 'Closed today' },
+              { key: 'patterns'     as const, value: new Set(tickets.map(t => t.issueKey)).size,                                        label: 'Issue patterns' },
+            ]).map(({ key, value, label }) => {
+              const isActive = activeMetric === key;
+              function handleClick() {
+                const next = isActive ? null : key;
+                setActiveMetric(next);
+                if (next !== null) workspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+              return (
+                <div
+                  key={label}
+                  className={`metricCard${isActive ? ' metricActive' : ''}`}
+                  onClick={handleClick}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isActive}
+                  onKeyDown={e => e.key === 'Enter' && handleClick()}
+                >
+                  <strong>{value}</strong>
+                  <span>{label}</span>
+                  {isActive && <small className="metricFilterHint">active · click to clear</small>}
+                </div>
+              );
+            })}
           </section>
 
-          <HaitiMap activeBranches={activeBranches} />
+          <HaitiMap activeBranches={activeBranches} cityStats={cityStats} />
 
-          <section className="workspace">
+          <section className="workspace" ref={workspaceRef}>
             <aside className="ticketList">
               <div className="ticketFilters">
                 <input
@@ -351,14 +470,28 @@ function App() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
-                <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as Status | 'ALL')}>
-                  <option value="ALL">All status</option>
-                  {['OPEN', 'IN_PROGRESS', 'WAITING_ON_AGENT', 'RESOLVED'].map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select aria-label="Filter by severity" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value as Severity | 'ALL')}>
-                  <option value="ALL">All severity</option>
-                  {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="filterRow">
+                  <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as Status | 'ALL')}>
+                    <option value="ALL">All status</option>
+                    {['OPEN', 'IN_PROGRESS', 'WAITING_ON_AGENT', 'RESOLVED'].map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select aria-label="Filter by severity" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value as Severity | 'ALL')}>
+                    <option value="ALL">All severity</option>
+                    {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="sortRow">
+                  <span>Sort by</span>
+                  <div className="sortPills">
+                    {(['severity', 'newest', 'oldest'] as const).map((val) => (
+                      <button
+                        key={val}
+                        className={`sortPill${sortBy === val ? ' active' : ''}`}
+                        onClick={() => setSortBy(val)}
+                      >{{ severity: 'Severity', newest: 'Newest', oldest: 'Oldest' }[val]}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {visibleTickets.map((ticket) => {
@@ -372,7 +505,8 @@ function App() {
                     <span>{ticket.title}</span>
                     <span className="ticketCardMeta">
                       <small>{ticket.agent.displayName ?? ticket.agent.phoneNumber} · {ticket.branchId ?? 'No branch'}</small>
-                      <span className="waBadgeSmall"><WhatsAppIcon size={10} /> {lang.flag} {lang.name}</span>
+                      <span className="waBadgeSmall"><WhatsAppIcon size={10} /></span>
+                      <span className="langChip">{lang.name}</span>
                     </span>
                   </button>
                 );
@@ -388,12 +522,28 @@ function App() {
                     <p>{selected.summary}</p>
                   </div>
                   <div className="controls">
+                    <button
+                      className={selected.status === 'RESOLVED' ? 'reopenBtn' : 'closeBtn'}
+                      onClick={() => updateTicket({ status: selected.status === 'RESOLVED' ? 'OPEN' : 'RESOLVED' })}
+                    >
+                      {selected.status === 'RESOLVED' ? 'Reopen' : 'Close ticket'}
+                    </button>
                     <select value={selected.status} onChange={(e) => updateTicket({ status: e.target.value as Status })}>
                       {['OPEN', 'IN_PROGRESS', 'WAITING_ON_AGENT', 'RESOLVED'].map((s) => <option key={s}>{s}</option>)}
                     </select>
-                    <select value={selected.severity} onChange={(e) => updateTicket({ severity: e.target.value as Severity })}>
-                      {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => <option key={s}>{s}</option>)}
-                    </select>
+                    <div className="severityPicker">
+                      <label>AI classified · confirm or adjust</label>
+                      <div className="severityPills">
+                        {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as Severity[]).map((s) => (
+                          <button
+                            key={s}
+                            className={`sevPill ${s.toLowerCase()}${selected.severity === s ? ' active' : ''}`}
+                            onClick={() => updateTicket({ severity: s })}
+                            aria-pressed={selected.severity === s}
+                          >{s}</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -403,7 +553,7 @@ function App() {
                   <div><span>Region</span><strong>{selected.region ?? 'Unknown'}</strong></div>
                   <div>
                     <span>Language</span>
-                    <strong>{LANG_META[selected.language]?.flag} {LANG_META[selected.language]?.name ?? selected.language}</strong>
+                    <span className="langChip langChipLg">{LANG_META[selected.language]?.name ?? selected.language}</span>
                   </div>
                 </div>
 
@@ -415,7 +565,8 @@ function App() {
                         {message.direction === 'INBOUND' && (
                           <span className="waBadgeMsg"><WhatsAppIcon size={11} /> via WhatsApp</span>
                         )}
-                        <span>{LANG_META[message.language]?.flag ?? ''} {Math.round(message.confidence * 100)}% confidence</span>
+                        <span className="langChip">{LANG_META[message.language]?.name ?? message.language}</span>
+                        <span>{Math.round(message.confidence * 100)}% confidence</span>
                       </div>
                       <p className="original">{message.bodyOriginal}</p>
                       {message.bodyTranslated && <p className="translation">{message.bodyTranslated}</p>}
