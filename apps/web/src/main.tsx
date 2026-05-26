@@ -44,7 +44,6 @@ interface Ticket {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
-const ACCESS_TOKEN_STORAGE_KEY = 'bonjou.dashboardAccessToken';
 
 const LANG_META: Record<string, { name: string }> = {
   ht: { name: 'Kreyòl' },
@@ -216,10 +215,6 @@ function App() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL');
   const [severityFilter, setSeverityFilter] = useState<Severity | 'ALL'>('ALL');
-  const [accessTokenInput, setAccessTokenInput] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY) ?? '');
-  const [authRequired, setAuthRequired] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
   const [scenarioIndex, setScenarioIndex] = useState(0);
   const [activeMetric, setActiveMetric] = useState<'open' | 'critical' | 'closed_today' | 'resolved' | 'patterns' | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'severity' | 'oldest'>('severity');
@@ -267,27 +262,8 @@ function App() {
     [visibleTickets, selectedId]
   );
 
-  function authHeaders(): HeadersInit {
-    return accessToken ? { 'x-dashboard-access-token': accessToken } : {};
-  }
-
-  function handleUnauthorized(response: Response) {
-    if (response.status === 401) {
-      setAuthRequired(true);
-      setAuthMessage(accessToken.trim()
-        ? 'That password did not unlock Bonjou. Check the value shared for this pilot.'
-        : 'Enter the Bonjou demo password shared for this pilot.');
-      return true;
-    }
-    return false;
-  }
-
   async function loadTickets() {
-    const response = await fetch(`${API_BASE}/api/tickets`, { headers: authHeaders() });
-    if (handleUnauthorized(response)) return;
-    const data = await response.json();
-    setAuthRequired(false);
-    setAuthMessage('');
+    const data = await fetch(`${API_BASE}/api/tickets`).then(r => r.json());
     setTickets(data.tickets);
     setSelectedId((current) => current ?? data.tickets?.[0]?.id ?? null);
   }
@@ -304,28 +280,25 @@ function App() {
     });
     socket.on('message:new', loadTickets);
     return () => { socket.disconnect(); };
-  }, [accessToken]);
+  }, []);
 
   async function updateTicket(partial: Partial<Pick<Ticket, 'status' | 'severity'>>) {
     if (!selected) return;
-    const response = await fetch(`${API_BASE}/api/tickets/${selected.id}`, {
+    const data = await fetch(`${API_BASE}/api/tickets/${selected.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(partial)
-    });
-    if (handleUnauthorized(response)) return;
-    const data = await response.json();
+    }).then(r => r.json());
     setTickets((current) => current.map((t) => t.id === selected.id ? data.ticket : t));
   }
 
   async function sendReply() {
     if (!selected || !reply.trim()) return;
-    const response = await fetch(`${API_BASE}/api/tickets/${selected.id}/messages`, {
+    await fetch(`${API_BASE}/api/tickets/${selected.id}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: reply })
     });
-    if (handleUnauthorized(response)) return;
     setReply('');
     await loadTickets();
   }
@@ -333,27 +306,11 @@ function App() {
   async function simulate() {
     const scenario = DEMO_SCENARIOS[scenarioIndex % DEMO_SCENARIOS.length];
     setScenarioIndex((i) => i + 1);
-    const response = await fetch(`${API_BASE}/dev/simulate-inbound`, {
+    await fetch(`${API_BASE}/dev/simulate-inbound`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(scenario)
     });
-    if (handleUnauthorized(response)) return;
-  }
-
-  function saveAccessToken(event: React.FormEvent) {
-    event.preventDefault();
-    const trimmed = accessTokenInput.trim();
-    if (!trimmed) {
-      localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-      setAccessToken('');
-      setAuthRequired(true);
-      setAuthMessage('Enter the Bonjou demo password shared for this pilot.');
-      return;
-    }
-    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, trimmed);
-    setAccessToken(trimmed);
-    setAuthMessage('Checking Bonjou demo password...');
   }
 
   const workspaceRef = useRef<HTMLElement>(null);
@@ -400,33 +357,12 @@ function App() {
           <h1>Bonjou</h1>
           <p>WhatsApp-native field ops inbox for Haiti</p>
         </div>
-        <button className="waButton" onClick={simulate} disabled={authRequired}>
-          {authRequired ? 'Unlock Bonjou first' : <><WhatsAppIcon size={16} />New field report</>}
+        <button className="waButton" onClick={simulate}>
+          <WhatsAppIcon size={16} />New field report
         </button>
       </header>
 
-      {authRequired && (
-        <form className="accessGate" onSubmit={saveAccessToken}>
-          <div className="accessGateCopy">
-            <label htmlFor="dashboardAccessToken">Bonjou demo password</label>
-            <p id="dashboardAccessHelp">Use the password shared by Thalia for this pilot.</p>
-            {authMessage && <p className="accessMessage">{authMessage}</p>}
-          </div>
-          <input
-            id="dashboardAccessToken"
-            value={accessTokenInput}
-            onChange={(event) => setAccessTokenInput(event.target.value)}
-            type="password"
-            autoComplete="off"
-            aria-describedby="dashboardAccessHelp"
-            placeholder="Paste Bonjou demo password"
-          />
-          <button type="submit">Open Bonjou</button>
-        </form>
-      )}
-
-      {!authRequired && (
-        <>
+      <>
           <section className="metrics">
             {([
               { key: 'open'         as const, value: tickets.filter(t => t.status !== 'RESOLVED').length,                              label: 'Open tickets' },
@@ -581,8 +517,7 @@ function App() {
               </article>
             )}
           </section>
-        </>
-      )}
+      </>
     </main>
   );
 }
